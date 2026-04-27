@@ -71,7 +71,7 @@ class ParallelManager:
             merged_path = os.path.join("/mnt/nfsshare/data/", merged_name)
             mode = 'wb' # intermediate merges stay in binary
         
-        print(f"merging {os.path.basename(file1)} + {os.path.basename(file2)} (final: {is_final})")
+        print(f"merging {os.path.basename(file1)} + {os.path.basename(file2)}")
         
         with open(file1, 'rb') as f1, open(file2, 'rb') as f2, open(merged_path, mode) as out:
             def get_val(f):
@@ -129,10 +129,10 @@ class ParallelManager:
                         self.ready_files.append(new_temp)
 
 def run_distributed_sort():
-    lines_limit = 1300000
-    total_chunks = 96
+    lines_limit = 150000
+    total_chunks = 100
     chunk_limit = lines_limit // total_chunks 
-    nodes = ['192.168.0.10', '192.168.0.20', '192.168.0.40']
+    nodes = ['192.168.0.10', '192.168.0.20', '192.168.0.30',  '192.168.0.40']
     master_ip = '192.168.1.190' 
     
     source = "/mnt/usb/data2.set"
@@ -154,7 +154,7 @@ def run_distributed_sort():
     # read input data and convert to binary chunks on the fly
     with open(source, "r") as f:
         for line in f:
-            val = line.strip()
+           val = line.strip()
             if val:
                 current_chunk.append(int(val))
             
@@ -173,7 +173,7 @@ def run_distributed_sort():
     # handle any remaining numbers if the file didn't perfectly divide
     if current_chunk and job_id < total_chunks:
         chunk_path = os.path.join(data_dir, f"input_{job_id}.bin")
-        # binary: convert remaining data to binary
+        # convert remaining data to binary
         with open(chunk_path, "wb") as wb:
             wb.write(struct.pack(f'{len(current_chunk)}i', *current_chunk))
         cluster.submit(chunk_path, job_id)
@@ -184,7 +184,7 @@ def run_distributed_sort():
     while manager.completed_jobs < total_chunks:
         time.sleep(1)
     
-    # final pass: merge the remaining binary files into the final ascii output
+    # final pass merge the remaining binary files into the final ascii output
     while len(manager.ready_files) > 1:
         with manager.lock:
             f1 = manager.ready_files.pop(0)
